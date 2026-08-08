@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
   Box, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, Chip, Alert,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
+  InputLabel
 } from '@mui/material';
 
 export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, tecnicos, emprestimos, setEmprestimos }) {
@@ -21,6 +22,18 @@ export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, 
   };
 
   const handleSalvar = () => {
+    // Regra 2.1: Verifica se todos os campos foram preenchidos
+    if (!novoEmprestimo.aluno_id || !novoEmprestimo.tecnico_id || !novoEmprestimo.equipamento_id) {
+      setErro('Preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    // Regra 2.1: Verifica se a data foi preenchida e se essa data existe
+    if (!novoEmprestimo.data_prevista_devolucao){
+      setErro('A data de devolução é inválida ou está em branco. Verifique os dias do mês.');
+      return;
+    }
+
     // Regra 2.1: Bloqueia se o aluno tem pendência
     if (alunoTemAtraso(novoEmprestimo.aluno_id)) {
       setErro('Aluno possui equipamento em atraso e não pode retirar outro item.');
@@ -31,11 +44,6 @@ export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, 
     // Regra 2.1: Bloqueia se o equipamento não está disponível
     if (equipamento?.status !== 'disponivel') {
       setErro('Equipamento não está disponível para empréstimo.');
-      return;
-    }
-
-    if (!novoEmprestimo.aluno_id || !novoEmprestimo.tecnico_id || !novoEmprestimo.data_prevista_devolucao) {
-      setErro('Preencha todos os campos obrigatórios.');
       return;
     }
 
@@ -79,7 +87,14 @@ export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, 
       const aluno = alunos.find(a => a.id === emp.aluno_id);
       const equipamento = equipamentos.find(eq => eq.id === emp.equipamento_id);
       const atrasado = emp.data_prevista_devolucao < hojeData;
-      return { ...emp, alunoNome: aluno?.nome, equipamentoNome: equipamento?.nome, atrasado };
+      return { 
+        ...emp, 
+        alunoNome: aluno?.nome, 
+        alunoMatricula: aluno?.matricula, // Puxando a matrícula
+        equipamentoNome: equipamento?.nome, 
+        equipamentoPatrimonio: equipamento?.patrimonio, // Puxando o patrimônio
+        atrasado 
+      };
     });
 
   return (
@@ -95,8 +110,8 @@ export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, 
         <Table>
           <TableHead sx={{ bgcolor: '#f0f0f0' }}>
             <TableRow>
-              <TableCell><strong>Aluno</strong></TableCell>
               <TableCell><strong>Equipamento</strong></TableCell>
+              <TableCell><strong>Aluno</strong></TableCell>
               <TableCell><strong>Retirada</strong></TableCell>
               <TableCell><strong>Prev. Devolução</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
@@ -106,22 +121,47 @@ export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, 
           <TableBody>
             {emprestimosAtivos.map((item) => (
               <TableRow key={item.id} sx={{ bgcolor: item.atrasado ? '#fff5f5' : 'inherit' }}>
-                <TableCell>{item.alunoNome}</TableCell>
-                <TableCell>{item.equipamentoNome}</TableCell>
-                <TableCell>{item.data_emprestimo}</TableCell>
-                <TableCell>{item.data_prevista_devolucao}</TableCell>
+                
+                {/* Coluna do Equipamento (Título + Subtítulo) */}
+                <TableCell>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }} color={item.atrasado ? 'error' : 'textPrimary'}>
+                    {item.equipamentoNome}
+                  </Typography>
+                  <Typography variant="caption" color={item.atrasado ? 'error' : 'textSecondary'}>
+                    Pat: {item.equipamentoPatrimonio}
+                  </Typography>
+                </TableCell>
+
+                {/* Coluna do Aluno (Título + Subtítulo) */}
+                <TableCell>
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }} color={item.atrasado ? 'error' : 'textPrimary'}>
+                    {item.alunoNome}
+                  </Typography>
+                  <Typography variant="caption" color={item.atrasado ? 'error' : 'textSecondary'}>
+                    {item.alunoMatricula}
+                  </Typography>
+                </TableCell>
+
+                <TableCell sx={{ color: item.atrasado ? 'red' : 'inherit' }}>{item.data_emprestimo}</TableCell>
+                <TableCell sx={{ color: item.atrasado ? 'red' : 'inherit', fontWeight: item.atrasado ? 'bold' : 'normal' }}>
+                  {item.data_prevista_devolucao}
+                </TableCell>
+                
                 <TableCell>
                   <Chip
-                    label={item.atrasado ? 'Atrasado' : 'Em Dia'}
-                    color={item.atrasado ? 'error' : 'primary'}
+                    label={item.atrasado ? 'Atrasado' : 'Em dia'}
+                    color={item.atrasado ? 'error' : 'success'}
+                    variant={item.atrasado ? 'filled' : 'outlined'} // Deixa o "Em dia" vazado e o "Atrasado" preenchido
                     size="small"
                   />
                 </TableCell>
+                
                 <TableCell align="center">
-                  <Button size="small" variant="outlined" onClick={() => handleDevolver(item.id, item.equipamento_id)}>
+                  <Button size="small" variant="outlined" color="inherit" onClick={() => handleDevolver(item.id, item.equipamento_id)}>
                     Devolver
                   </Button>
                 </TableCell>
+
               </TableRow>
             ))}
           </TableBody>
@@ -161,10 +201,10 @@ export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, 
               ))}
             </TextField>
 
-            {/* <TextField label="Data Prevista de Devolução" type="date" fullWidth InputLabelProps={{ shrink: true }}
+            { <TextField label="Data Prevista de Devolução" type="date" fullWidth slotProps={{inputLabel: { shrink: true, } }} 
               value={novoEmprestimo.data_prevista_devolucao}
               onChange={(e) => setNovoEmprestimo({ ...novoEmprestimo, data_prevista_devolucao: e.target.value })}
-            /> */}
+            /> }
           </Box>
         </DialogContent>
         <DialogActions>
