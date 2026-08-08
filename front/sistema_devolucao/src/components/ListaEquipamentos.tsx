@@ -3,6 +3,7 @@ import {
   Box, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, MenuItem
 } from '@mui/material';
+import { AddBox } from '@mui/icons-material';
 
 export default function ListaEquipamentos({ equipamentos, setEquipamentos }) {
   const [modalAberto, setModalAberto] = useState(false);
@@ -27,52 +28,79 @@ export default function ListaEquipamentos({ equipamentos, setEquipamentos }) {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h6">Equipamentos</Typography>
-        <Button variant="contained" onClick={() => setModalAberto(true)}>+ Novo Equipamento</Button>
+      {/* Cabeçalho da Seção */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Controle de Equipamentos</Typography>
+        <Button variant="contained" color="success" startIcon={<AddBox />} onClick={() => setModalAberto(true)}>
+          Novo Equipamento
+        </Button>
       </Box>
 
-      <TableContainer component={Paper}>
+      {/* Tabela com visual Clean */}
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: 2 }}>
         <Table>
-          <TableHead sx={{ bgcolor: '#f0f0f0' }}>
+          <TableHead>
             <TableRow>
-              <TableCell><strong>Patrimônio</strong></TableCell>
-              <TableCell><strong>Nome</strong></TableCell>
+              <TableCell><strong>Equipamento</strong></TableCell>
               <TableCell><strong>Categoria</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {equipamentos.map((item) => (
-              <TableRow key={item.id}>
-                <TableCell>{item.patrimonio}</TableCell>
-                <TableCell>{item.nome}</TableCell>
-                <TableCell>{item.categoria}</TableCell>
+              <TableRow key={item.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                
+                {/* Coluna Unificada: Nome (Título) + Patrimônio (Subtítulo) */}
                 <TableCell>
-                  <Chip label={formatarStatus(item.status).label} color={formatarStatus(item.status).color} size="small" />
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    {item.nome}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    Pat: {item.patrimonio}
+                  </Typography>
                 </TableCell>
+
+                <TableCell>{item.categoria}</TableCell>
+                
+                <TableCell>
+                  <Chip 
+                    label={formatarStatus(item.status).label} 
+                    color={formatarStatus(item.status).color} 
+                    size="small" 
+                    sx={{ fontWeight: 'bold' }} 
+                  />
+                </TableCell>
+                
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
 
+      {/* Janela Flutuante (Modal) */}
       <Dialog open={modalAberto} onClose={() => setModalAberto(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Cadastrar Equipamento</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Cadastrar Equipamento</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
+            
             <TextField label="Nome do Equipamento" fullWidth value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} />
-            <TextField label="Patrimônio" fullWidth value={novo.patrimonio} onChange={(e) => setNovo({ ...novo, patrimonio: e.target.value })} />
-            <TextField label="Categoria" fullWidth value={novo.categoria} onChange={(e) => setNovo({ ...novo, categoria: e.target.value })} />
+            
+            {/* Agrupando Patrimônio e Categoria lado a lado */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField label="Patrimônio" fullWidth value={novo.patrimonio} onChange={(e) => setNovo({ ...novo, patrimonio: e.target.value })} />
+              <TextField label="Categoria" fullWidth value={novo.categoria} onChange={(e) => setNovo({ ...novo, categoria: e.target.value })} />
+            </Box>
+
             <TextField select label="Status Inicial" fullWidth value={novo.status} onChange={(e) => setNovo({ ...novo, status: e.target.value })}>
               <MenuItem value="disponivel">Disponível</MenuItem>
               <MenuItem value="manutencao">Em Manutenção</MenuItem>
             </TextField>
+
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModalAberto(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleCadastrar}>Salvar</Button>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setModalAberto(false)} color="inherit">Cancelar</Button>
+          <Button variant="contained" color="success" onClick={handleCadastrar}>Salvar</Button>
         </DialogActions>
       </Dialog>
     </Box>
