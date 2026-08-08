@@ -3,46 +3,66 @@ import {
   Box, Typography, Button, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Paper, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Switch, FormControlLabel
 } from '@mui/material';
+import { PersonAdd } from '@mui/icons-material';
 
 export default function ListaAlunos({ alunos, setAlunos }) {
   const [modalAberto, setModalAberto] = useState(false);
-  const [novo, setNovo] = useState({ nome: '', matricula: '', email: '', telefone: '', ativo: true });
+  // Removido o 'telefone' do estado inicial
+  const [novo, setNovo] = useState({ nome: '', matricula: '', email: '', ativo: true });
 
   const handleCadastrar = () => {
     if (!novo.nome || !novo.matricula) return;
     setAlunos([...alunos, { id: Date.now(), ...novo }]);
-    setNovo({ nome: '', matricula: '', email: '', telefone: '', ativo: true });
+    // Removido o 'telefone' do reset
+    setNovo({ nome: '', matricula: '', email: '', ativo: true });
     setModalAberto(false);
   };
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h6">Alunos</Typography>
-        <Button variant="contained" onClick={() => setModalAberto(true)}>+ Novo Aluno</Button>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Controle de Alunos</Typography>
+        <Button variant="contained" color="success" startIcon={<PersonAdd />} onClick={() => setModalAberto(true)}>
+          Novo Aluno
+        </Button>
       </Box>
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: 2 }}>
         <Table>
-          <TableHead sx={{ bgcolor: '#f0f0f0' }}>
+          <TableHead>
             <TableRow>
-              <TableCell><strong>Matrícula</strong></TableCell>
-              <TableCell><strong>Nome</strong></TableCell>
+              <TableCell><strong>Aluno</strong></TableCell>
               <TableCell><strong>E-mail</strong></TableCell>
-              <TableCell><strong>Telefone</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {alunos.map((aluno) => (
-              <TableRow key={aluno.id}>
-                <TableCell>{aluno.matricula}</TableCell>
-                <TableCell>{aluno.nome}</TableCell>
-                <TableCell>{aluno.email}</TableCell>
-                <TableCell>{aluno.telefone}</TableCell>
+              <TableRow key={aluno.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                
                 <TableCell>
-                  <Chip label={aluno.ativo ? 'Ativo' : 'Inativo'} color={aluno.ativo ? 'success' : 'default'} size="small" />
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    {aluno.nome}
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary">
+                    Matrícula: {aluno.matricula}
+                  </Typography>
                 </TableCell>
+
+                {/* Exibindo apenas o E-mail como contato */}
+                <TableCell>
+                  {aluno.email}
+                </TableCell>
+                
+                <TableCell>
+                  <Chip 
+                    label={aluno.ativo ? 'Ativo' : 'Inativo'} 
+                    color={aluno.ativo ? 'success' : 'default'} 
+                    size="small" 
+                    sx={{ fontWeight: 'bold' }} 
+                  />
+                </TableCell>
+                
               </TableRow>
             ))}
           </TableBody>
@@ -50,19 +70,28 @@ export default function ListaAlunos({ alunos, setAlunos }) {
       </TableContainer>
 
       <Dialog open={modalAberto} onClose={() => setModalAberto(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Cadastrar Aluno</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField label="Nome" fullWidth value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} />
-            <TextField label="Matrícula" fullWidth value={novo.matricula} onChange={(e) => setNovo({ ...novo, matricula: e.target.value })} />
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Cadastrar Aluno</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
+            
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField label="Nome Completo" fullWidth value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} />
+              <TextField label="Matrícula" fullWidth value={novo.matricula} onChange={(e) => setNovo({ ...novo, matricula: e.target.value })} />
+            </Box>
+
+            {/* Ocupando a linha inteira apenas com o E-mail */}
             <TextField label="E-mail" fullWidth value={novo.email} onChange={(e) => setNovo({ ...novo, email: e.target.value })} />
-            <TextField label="Telefone" fullWidth value={novo.telefone} onChange={(e) => setNovo({ ...novo, telefone: e.target.value })} />
-            <FormControlLabel control={<Switch checked={novo.ativo} onChange={(e) => setNovo({ ...novo, ativo: e.target.checked })} />} label="Aluno Ativo" />
+
+            <FormControlLabel 
+              control={<Switch checked={novo.ativo} onChange={(e) => setNovo({ ...novo, ativo: e.target.checked })} color="success" />} 
+              label="Aluno Ativo no Sistema" 
+            />
+            
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModalAberto(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleCadastrar}>Salvar</Button>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setModalAberto(false)} color="inherit">Cancelar</Button>
+          <Button variant="contained" color="success" onClick={handleCadastrar}>Salvar</Button>
         </DialogActions>
       </Dialog>
     </Box>

@@ -1,62 +1,107 @@
 import React, { useState } from 'react';
 import {
   Box, Typography, Button, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Paper, Chip, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Switch, FormControlLabel
+  TableContainer, TableHead, TableRow, Paper, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Chip, Switch, FormControlLabel
 } from '@mui/material';
+import { Engineering } from '@mui/icons-material';
 
 export default function ListaTecnicos({ tecnicos, setTecnicos }) {
   const [modalAberto, setModalAberto] = useState(false);
+  
+  // Estado com o campo "ativo" incluído novamente
   const [novo, setNovo] = useState({ nome: '', login: '', ativo: true });
 
   const handleCadastrar = () => {
     if (!novo.nome || !novo.login) return;
     setTecnicos([...tecnicos, { id: Date.now(), ...novo }]);
+    // Limpando o formulário e resetando para ativo por padrão
     setNovo({ nome: '', login: '', ativo: true });
     setModalAberto(false);
   };
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-        <Typography variant="h6">Técnicos do Laboratório</Typography>
-        <Button variant="contained" onClick={() => setModalAberto(true)}>+ Novo Técnico</Button>
+      {/* Cabeçalho da Seção */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Controle de Técnicos</Typography>
+        <Button variant="contained" color="success" startIcon={<Engineering />} onClick={() => setModalAberto(true)}>
+          Novo Técnico
+        </Button>
       </Box>
 
-      <TableContainer component={Paper}>
+      {/* Tabela com visual Clean */}
+      <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: 2 }}>
         <Table>
-          <TableHead sx={{ bgcolor: '#f0f0f0' }}>
+          <TableHead>
             <TableRow>
-              <TableCell><strong>Nome</strong></TableCell>
-              <TableCell><strong>Login</strong></TableCell>
+              <TableCell><strong>Técnico Responsável</strong></TableCell>
+              <TableCell><strong>Login de Acesso</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {tecnicos.map((tec) => (
-              <TableRow key={tec.id}>
-                <TableCell>{tec.nome}</TableCell>
-                <TableCell>{tec.login}</TableCell>
+              <TableRow key={tec.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                
                 <TableCell>
-                  <Chip label={tec.ativo ? 'Ativo' : 'Inativo'} color={tec.ativo ? 'primary' : 'default'} size="small" />
+                  <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                    {tec.nome}
+                  </Typography>
                 </TableCell>
+
+                <TableCell>
+                  <Typography variant="body2" color="textSecondary">
+                    {tec.login}
+                  </Typography>
+                </TableCell>
+
+                {/* Chip visual para o Status */}
+                <TableCell>
+                  <Chip 
+                    label={tec.ativo ? 'Ativo' : 'Inativo'} 
+                    color={tec.ativo ? 'success' : 'default'} 
+                    size="small" 
+                    sx={{ fontWeight: 'bold' }} 
+                  />
+                </TableCell>
+                
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
 
+      {/* Janela Flutuante (Modal) */}
       <Dialog open={modalAberto} onClose={() => setModalAberto(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Cadastrar Técnico</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField label="Nome" fullWidth value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} />
-            <TextField label="Login de Acesso" fullWidth value={novo.login} onChange={(e) => setNovo({ ...novo, login: e.target.value })} />
-            <FormControlLabel control={<Switch checked={novo.ativo} onChange={(e) => setNovo({ ...novo, ativo: e.target.checked })} />} label="Técnico Ativo" />
+        <DialogTitle sx={{ fontWeight: 'bold' }}>Cadastrar Técnico</DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
+            
+            <TextField 
+              label="Nome Completo" 
+              fullWidth 
+              value={novo.nome} 
+              onChange={(e) => setNovo({ ...novo, nome: e.target.value })} 
+            />
+            
+            <TextField 
+              label="Login de Acesso (Usuário)" 
+              fullWidth 
+              value={novo.login} 
+              onChange={(e) => setNovo({ ...novo, login: e.target.value })} 
+            />
+
+            {/* Switch de controle de acesso adicionado ao modal */}
+            <FormControlLabel 
+              control={<Switch checked={novo.ativo} onChange={(e) => setNovo({ ...novo, ativo: e.target.checked })} color="success" />} 
+              label="Técnico Ativo no Sistema" 
+            />
+            
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModalAberto(false)}>Cancelar</Button>
-          <Button variant="contained" onClick={handleCadastrar}>Salvar</Button>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setModalAberto(false)} color="inherit">Cancelar</Button>
+          <Button variant="contained" color="success" onClick={handleCadastrar}>Salvar</Button>
         </DialogActions>
       </Dialog>
     </Box>
