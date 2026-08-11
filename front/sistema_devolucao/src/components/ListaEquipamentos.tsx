@@ -9,11 +9,29 @@ export default function ListaEquipamentos({ equipamentos, setEquipamentos }) {
   const [modalAberto, setModalAberto] = useState(false);
   const [novo, setNovo] = useState({ nome: '', patrimonio: '', categoria: '', status: 'disponivel' });
 
-  const handleCadastrar = () => {
+  // Transformado em Async para comunicar com a API
+  const handleCadastrar = async () => {
     if (!novo.nome || !novo.patrimonio) return;
-    setEquipamentos([...equipamentos, { id: Date.now(), ...novo }]);
-    setNovo({ nome: '', patrimonio: '', categoria: '', status: 'disponivel' });
-    setModalAberto(false);
+
+    try {
+      const resposta = await fetch(`${import.meta.env.VITE_API_URL}/equipamentos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novo),
+      });
+
+      if (resposta.ok) {
+        const equipamentoSalvo = await resposta.json();
+        // Atualiza usando o objeto que retornou do banco (com ID real)
+        setEquipamentos([...equipamentos, equipamentoSalvo]);
+        setNovo({ nome: '', patrimonio: '', categoria: '', status: 'disponivel' });
+        setModalAberto(false);
+      } else {
+        console.error("Erro na API ao salvar equipamento.");
+      }
+    } catch (erro) {
+      console.error("Erro de comunicação com o servidor:", erro);
+    }
   };
 
   const formatarStatus = (status) => {
@@ -28,7 +46,6 @@ export default function ListaEquipamentos({ equipamentos, setEquipamentos }) {
 
   return (
     <Box>
-      {/* Cabeçalho da Seção */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h6" sx={{ fontWeight: 'bold' }}>Controle de Equipamentos</Typography>
         <Button variant="contained" color="success" startIcon={<AddBox />} onClick={() => setModalAberto(true)}>
@@ -36,7 +53,6 @@ export default function ListaEquipamentos({ equipamentos, setEquipamentos }) {
         </Button>
       </Box>
 
-      {/* Tabela com visual Clean */}
       <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0', borderRadius: 2 }}>
         <Table>
           <TableHead>
@@ -49,8 +65,6 @@ export default function ListaEquipamentos({ equipamentos, setEquipamentos }) {
           <TableBody>
             {equipamentos.map((item) => (
               <TableRow key={item.id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                
-                {/* Coluna Unificada: Nome (Título) + Patrimônio (Subtítulo) */}
                 <TableCell>
                   <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                     {item.nome}
@@ -59,9 +73,7 @@ export default function ListaEquipamentos({ equipamentos, setEquipamentos }) {
                     Pat: {item.patrimonio}
                   </Typography>
                 </TableCell>
-
                 <TableCell>{item.categoria}</TableCell>
-                
                 <TableCell>
                   <Chip 
                     label={formatarStatus(item.status).label} 
@@ -70,32 +82,25 @@ export default function ListaEquipamentos({ equipamentos, setEquipamentos }) {
                     sx={{ fontWeight: 'bold' }} 
                   />
                 </TableCell>
-                
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </TableContainer>
 
-      {/* Janela Flutuante (Modal) */}
       <Dialog open={modalAberto} onClose={() => setModalAberto(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 'bold' }}>Cadastrar Equipamento</DialogTitle>
         <DialogContent dividers>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
-            
             <TextField label="Nome do Equipamento" fullWidth value={novo.nome} onChange={(e) => setNovo({ ...novo, nome: e.target.value })} />
-            
-            {/* Agrupando Patrimônio e Categoria lado a lado */}
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField label="Patrimônio" fullWidth value={novo.patrimonio} onChange={(e) => setNovo({ ...novo, patrimonio: e.target.value })} />
               <TextField label="Categoria" fullWidth value={novo.categoria} onChange={(e) => setNovo({ ...novo, categoria: e.target.value })} />
             </Box>
-
             <TextField select label="Status Inicial" fullWidth value={novo.status} onChange={(e) => setNovo({ ...novo, status: e.target.value })}>
               <MenuItem value="disponivel">Disponível</MenuItem>
               <MenuItem value="manutencao">Em Manutenção</MenuItem>
             </TextField>
-
           </Box>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>

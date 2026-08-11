@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ListaEquipamentos from './components/ListaEquipamentos';
 import ListaDevolucao from './components/ListaDevolucao';
 import ListaAlunos from './components/ListaAlunos';
@@ -12,34 +12,30 @@ const LARGURA_MENU = 240;
 export default function App() {
   const [menuAtivo, setMenuAtivo] = useState(0);
 
-  // Tabelas simuladas baseadas no banco de dados (Mantidas do seu código original)
-  const [alunos, setAlunos] = useState([
-    { id: 1, nome: 'João Silva', matricula: '202301', email: 'joao@email.com', telefone: '11999999999', ativo: true },
-    { id: 2, nome: 'Maria Souza', matricula: '202302', email: 'maria@email.com', telefone: '11888888888', ativo: true }
-  ]);
+  // 1. Estados limpos (iniciam como listas vazias para receber o banco de dados)
+  const [alunos, setAlunos] = useState([]);
+  const [equipamentos, setEquipamentos] = useState([]);
+  const [tecnicos, setTecnicos] = useState([]);
+  const [emprestimos, setEmprestimos] = useState([]);
 
-  const [equipamentos, setEquipamentos] = useState([
-    { id: 1, nome: 'Osciloscópio Digital', patrimonio: 'LAB-0101', categoria: 'Medição', status: 'emprestado' },
-    { id: 2, nome: 'Multímetro Fluke', patrimonio: 'LAB-0102', categoria: 'Medição', status: 'disponivel' }
-  ]);
+  // 2. Busca todos os dados do banco com proteção contra falhas
+  useEffect(() => {
+    const fetchSeguro = (url: string) => fetch(url).then(res => res.ok ? res.json() : []);
 
-  const [tecnicos, setTecnicos] = useState([
-    { id: 1, nome: 'Carlos Eduardo', login: 'carlos.tec', ativo: true },
-    { id: 2, nome: 'Ana Costa', login: 'ana.tec', ativo: true }
-  ]);
-
-  const [emprestimos, setEmprestimos] = useState([
-    { 
-      id: 1, 
-      aluno_id: 2, 
-      equipamento_id: 1, 
-      tecnico_id: 1, 
-      tecnico_devolucao_id: null, 
-      data_emprestimo: '2026-07-20', 
-      data_prevista_devolucao: '2026-07-27', 
-      data_devolucao: null 
-    }
-  ]);
+    Promise.all([
+      fetchSeguro(`${import.meta.env.VITE_API_URL}/alunos`),
+      fetchSeguro(`${import.meta.env.VITE_API_URL}/equipamentos`),
+      fetchSeguro(`${import.meta.env.VITE_API_URL}/tecnicos`),
+      fetchSeguro(`${import.meta.env.VITE_API_URL}/emprestimos/ativos`)
+    ])
+    .then(([dadosAlunos, dadosEquipamentos, dadosTecnicos, dadosEmprestimos]) => {
+      setAlunos(dadosAlunos);
+      setEquipamentos(dadosEquipamentos);
+      setTecnicos(dadosTecnicos);
+      setEmprestimos(dadosEmprestimos);
+    })
+    .catch(erro => console.error("Erro ao carregar dados da API:", erro));
+  }, []);
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f4f6f8' }}>
@@ -66,7 +62,6 @@ export default function App() {
         </Toolbar>
         <List sx={{ mt: 2 }}>
           {['Empréstimos', 'Equipamentos', 'Alunos', 'Técnicos'].map((texto, index) => {
-            // Define um ícone específico para cada tela
             const icones = [<Dashboard />, <PrecisionManufacturing />, <School />, <Engineering />];
 
             return (
@@ -75,12 +70,11 @@ export default function App() {
                   selected={menuAtivo === index} 
                   onClick={() => setMenuAtivo(index)}
                   sx={{
-                    mx: 1, // Dá uma margem lateral para o botão não colar na borda
-                    borderRadius: 1, // Arredonda os cantos do botão
+                    mx: 1, 
+                    borderRadius: 1, 
                     '&.Mui-selected': { bgcolor: 'rgba(255,255,255,0.1)' } 
                   }}
                 >
-                  {/* Renderiza o ícone correspondente e força a cor branca */}
                   <ListItemIcon sx={{ color: '#fff', minWidth: 40 }}>
                     {icones[index]}
                   </ListItemIcon>
@@ -104,7 +98,7 @@ export default function App() {
           </Toolbar>
         </AppBar>
 
-        {/* Renderização das Telas - Cada tela já cuida do seu próprio Modal de cadastro! */}
+        {/* Renderização das Telas - O App.tsx distribui os dados reais para cada tela */}
         {menuAtivo === 0 && <ListaDevolucao alunos={alunos} equipamentos={equipamentos} setEquipamentos={setEquipamentos} tecnicos={tecnicos} emprestimos={emprestimos} setEmprestimos={setEmprestimos} />}
         {menuAtivo === 1 && <ListaEquipamentos equipamentos={equipamentos} setEquipamentos={setEquipamentos} />}
         {menuAtivo === 2 && <ListaAlunos alunos={alunos} setAlunos={setAlunos} />}
