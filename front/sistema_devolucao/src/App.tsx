@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import Dashboard from './components/Dashboard';
 import ListaEquipamentos from './components/ListaEquipamentos';
 import ListaDevolucao from './components/ListaDevolucao';
 import ListaAlunos from './components/ListaAlunos';
 import ListaTecnicos from './components/ListaTecnicos';
 import { AppBar, Box, CssBaseline, Drawer, List, ListItem, ListItemButton, ListItemText, Toolbar, Typography } from '@mui/material';
-import { Dashboard, PrecisionManufacturing, School, Engineering } from '@mui/icons-material';
+import { Dashboard as DashboardIcon, Assignment, PrecisionManufacturing, School, Engineering } from '@mui/icons-material';
 import { ListItemIcon } from '@mui/material';
 
 const LARGURA_MENU = 240;
@@ -61,8 +62,8 @@ export default function App() {
         </Typography>
         </Toolbar>
         <List sx={{ mt: 2 }}>
-          {['Empréstimos', 'Equipamentos', 'Alunos', 'Técnicos'].map((texto, index) => {
-            const icones = [<Dashboard />, <PrecisionManufacturing />, <School />, <Engineering />];
+          {['Dashboard', 'Empréstimos', 'Equipamentos', 'Alunos', 'Técnicos'].map((texto, index) => {
+            const icones = [<DashboardIcon />, <Assignment />, <PrecisionManufacturing />, <School />, <Engineering />];
 
             return (
               <ListItem key={texto} disablePadding>
@@ -99,10 +100,11 @@ export default function App() {
         </AppBar>
 
         {/* Renderização das Telas - O App.tsx distribui os dados reais para cada tela */}
-        {menuAtivo === 0 && <ListaDevolucao alunos={alunos} equipamentos={equipamentos} setEquipamentos={setEquipamentos} tecnicos={tecnicos} emprestimos={emprestimos} setEmprestimos={setEmprestimos} />}
-        {menuAtivo === 1 && <ListaEquipamentos equipamentos={equipamentos} setEquipamentos={setEquipamentos} />}
-        {menuAtivo === 2 && <ListaAlunos alunos={alunos} setAlunos={setAlunos} />}
-        {menuAtivo === 3 && <ListaTecnicos tecnicos={tecnicos} setTecnicos={setTecnicos} />}
+        {menuAtivo === 0 && <Dashboard alunos={alunos} equipamentos={equipamentos} emprestimos={emprestimos} onNavegar={setMenuAtivo} />}
+        {menuAtivo === 1 && <ListaDevolucao alunos={alunos} equipamentos={equipamentos} setEquipamentos={setEquipamentos} tecnicos={tecnicos} emprestimos={emprestimos} setEmprestimos={setEmprestimos} />}
+        {menuAtivo === 2 && <ListaEquipamentos equipamentos={equipamentos} setEquipamentos={setEquipamentos} />}
+        {menuAtivo === 3 && <ListaAlunos alunos={alunos} setAlunos={setAlunos} />}
+        {menuAtivo === 4 && <ListaTecnicos tecnicos={tecnicos} setTecnicos={setTecnicos} />}
       </Box>
     </Box>
   );
