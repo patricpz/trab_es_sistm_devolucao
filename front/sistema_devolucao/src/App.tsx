@@ -26,7 +26,7 @@ export default function App() {
       fetchSeguro(`${import.meta.env.VITE_API_URL}/alunos`),
       fetchSeguro(`${import.meta.env.VITE_API_URL}/equipamentos`),
       fetchSeguro(`${import.meta.env.VITE_API_URL}/tecnicos`),
-      fetchSeguro(`${import.meta.env.VITE_API_URL}/emprestimos`)
+      fetchSeguro(`${import.meta.env.VITE_API_URL}/emprestimos/ativos`)
     ])
     .then(([dadosAlunos, dadosEquipamentos, dadosTecnicos, dadosEmprestimos]) => {
       setAlunos(dadosAlunos);

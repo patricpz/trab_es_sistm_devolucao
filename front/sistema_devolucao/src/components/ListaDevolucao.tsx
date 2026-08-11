@@ -80,8 +80,8 @@ export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, 
     const tecnicoPadraoId = tecnicos[0]?.id; // Simula login do técnico logado
 
     try {
-      const resposta = await fetch(`${import.meta.env.VITE_API_URL}/emprestimos/${emprestimoId}`, {
-        method: 'PUT',
+      const resposta = await fetch(`${import.meta.env.VITE_API_URL}/emprestimos/${emprestimoId}/devolver`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           data_devolucao: hojeData,
@@ -105,18 +105,18 @@ export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, 
     }
   };
 
+  console.log("Dados puros da API:", emprestimos);
+
   const emprestimosAtivos = emprestimos
     .filter(emp => !emp.data_devolucao)
     .map(emp => {
-      const aluno = alunos.find(a => a.id === emp.aluno_id);
-      const equipamento = equipamentos.find(eq => eq.id === emp.equipamento_id);
       const atrasado = emp.data_prevista_devolucao < hojeData;
       return { 
         ...emp, 
-        alunoNome: aluno?.nome, 
-        alunoMatricula: aluno?.matricula,
-        equipamentoNome: equipamento?.nome, 
-        equipamentoPatrimonio: equipamento?.patrimonio,
+        alunoNome: emp.aluno_nome,
+        equipamentoNome: emp.equipamento_nome,
+        alunoMatricula: emp.aluno_matricula,
+        equipamentoPatrimonio: emp.equipamento_patrimonio,
         atrasado 
       };
     });
@@ -161,9 +161,11 @@ export default function ListaDevolucao({ alunos, equipamentos, setEquipamentos, 
                     {item.alunoMatricula}
                   </Typography>
                 </TableCell>
-                <TableCell sx={{ color: item.atrasado ? 'red' : 'inherit' }}>{item.data_emprestimo}</TableCell>
+                <TableCell sx={{ color: item.atrasado ? 'red' : 'inherit' }}>
+                  {new Date(item.data_emprestimo).toLocaleDateString('pt-BR')}
+                </TableCell>
                 <TableCell sx={{ color: item.atrasado ? 'red' : 'inherit', fontWeight: item.atrasado ? 'bold' : 'normal' }}>
-                  {item.data_prevista_devolucao}
+                  {new Date(item.data_prevista_devolucao).toLocaleDateString('pt-BR')}
                 </TableCell>
                 <TableCell>
                   <Chip
