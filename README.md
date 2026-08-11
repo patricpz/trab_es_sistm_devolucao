@@ -1,5 +1,10 @@
 # DECISOES.md — Sistema de Empréstimo de Equipamentos
 
+
+#Equipe
+Patric Araujo Barros
+Luis Gustavo Santos Macêdo
+
 ## 1. Decisões assumidas
 
 1. O pedido não especifica o que caracteriza "pendência" do aluno. Assumimos que pendência é um empréstimo com `data_devolucao IS NULL` e `data_prevista_devolucao` no passado (ou seja, atraso, não simples posse de um item emprestado). Se o cliente esperasse que "pendência" incluísse qualquer empréstimo em aberto (mesmo sem atraso), o impacto seria: trocar a condição da regra de bloqueio em `crud.py` de `data_prevista_devolucao < hoje` para simplesmente `data_devolucao IS NULL`, e reescrever a mensagem de erro, já que hoje ela é apresentada como atraso e não como posse.
