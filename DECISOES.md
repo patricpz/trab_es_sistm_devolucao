@@ -1,5 +1,3 @@
-
-
 ## Visão geral da arquitetura
 
 O backend segue uma arquitetura em **camadas**, separando responsabilidades entre roteamento HTTP, validação de entrada/saída, regras de negócio e persistência.

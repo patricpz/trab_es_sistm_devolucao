@@ -54,12 +54,17 @@
 
 ## 4. Decisões da ferramenta de IA
 
-Ao gerar o índice único parcial (`ix_emprestimo_equipamento_aberto`) e a regra de "um empréstimo aberto por equipamento", a IA decidiu, sem que isso tivesse sido pedido explicitamente, aplicar a garantia em **duas camadas** — validação em `crud.py` e constraint no banco — em vez de confiar só na validação da aplicação.
+O prompt enviado à IA que gerou o backend (Cursor, com prompt redigido com apoio do Claude Code) já especifica explicitamente a maior parte do que antes parecia "decisão da IA": os campos, o enum de status, as quatro regras de negócio e até a exigência do índice único parcial junto com a validação em `crud.py`. Isso **não conta** para esta seção, porque foi pedido, não decidido pela ferramenta. As decisões abaixo são o que o prompt deixou em aberto e a IA precisou resolver por conta própria:
 
-- **Por que é plausível:** é uma prática defensiva padrão contra condições de corrida (dois técnicos registrando o mesmo empréstimo ao mesmo tempo), algo que uma validação só em Python não impede de forma confiável.
-- **Por que pode ser inadequada para este cliente:** um índice único no banco falha com um erro de integridade (IntegrityError) que precisa ser capturado e traduzido manualmente para a mensagem em português esperada pelo técnico (§ Regras de negócio do README). Se essa captura não estiver implementada em todos os pontos que escrevem em `emprestimo`, o usuário final pode ver um erro técnico do banco em vez da mensagem amigável — um comportamento que a IA não sinalizou como pendência de tratamento.
+1. **Mecanismo de tratamento do erro do índice único parcial.** O prompt pede para reforçar a regra "um empréstimo aberto por equipamento" tanto na aplicação quanto no banco, mas não diz *como* capturar a violação do índice nem qual mensagem devolver. Verificar em `crud.py`/`routers/emprestimos.py` se existe um `try/except` para `IntegrityError` ao criar o empréstimo, e qual é o texto exato gerado.
+   - Por que é plausível: é a forma usual de transformar uma constraint de banco em uma resposta HTTP com mensagem amigável.
+   - Por que pode ser inadequada: se a mensagem não distinguir "equipamento já emprestado" de outro erro de integridade (ex.: FK inválida), o técnico recebe uma mensagem genérica para um problema diferente do que o cliente pediu para tratar.
 
-*(Revisar o código de `crud.py` e confirmar se há pelo menos um `try/except` cobrindo `IntegrityError` na criação de empréstimo antes de considerar este item verificado.)*
+2. **Validação do campo `categoria` do equipamento.** O prompt define `categoria` apenas como "string, opcional", sem lista fechada de valores. Se a IA implementou como texto livre (sem enum nem tabela de categorias), essa é uma decisão dela, não pedida.
+   - Por que é plausível: texto livre é a leitura mais direta de "string opcional".
+   - Por que pode ser inadequada: sem lista fechada, a mesma categoria pode ser cadastrada com grafias diferentes ("Multímetro" vs "multimetro"), o que compromete qualquer filtro ou relatório futuro por categoria — algo que o pedido original não previu, mas que decorre diretamente dessa escolha.
+
+*(Abram o `crud.py`/`models.py` reais e confirmem qual das duas — ou outra que encontrarem na releitura — está de fato implementada; mantenham só a que aparece no código de vocês, com o trecho correspondente citado.)*
 
 ---
 
@@ -73,16 +78,167 @@ Horas decidindo o que o sistema deveria fazer: ___
 
 ## Declaração de uso de IA
 
-Ferramenta utilizada: ___
+**Frontend — Gemini.** Usado para gerar a interface em Vite + MUI Core, em três prompts sucessivos: 
+(1) o pedido original da coordenação, mais a solicitação de um front-end básico e simples em Vite/MUI;
+Precisamos de um sistema para controlar o empréstimo dos equipamentos do laboratório. O aluno pega o equipamento e devolve depois. Queremos saber o que está emprestado e para quem, e não queremos que os equipamentos sumam. Aluno com pendência não pode pegar mais nada. O técnico precisa de um relatório dos atrasos. Tem que ser simples de usar. Crie primeiramente um front end basico mas facil de usar usando vite js com mui core para design no momento é isso desenvolva isso 
 
-Para quê foi usada (ex.: geração de boilerplate do FastAPI, modelagem inicial das tabelas, escrita do README): ___
 
-O que foi verificado manualmente (ex.: regras de negócio testadas contra os critérios de aceite do §3, revisão linha a linha de `crud.py`, execução das migrações em máquina limpa): ___
+(2) divisão da interface em telas — lista de devolução, lista de aparelhos, lista de alunos, lista de técnicos; 
+com esse codigo front ja criado divida em steps
 
-# Backend — Sistema de Empréstimo de Equipamentos
+lista de devolução
 
-API REST para controle de empréstimo de equipamentos de laboratório.
+lista de aparelhos
 
-**Stack:** Python 3.11+ · FastAPI · SQLAlchemy 2.x · Alembic · PostgreSQL (Neon) · Pydantic v2
+lista de alunos
 
----
+lista de tecnicos
+
+(3) ajuste do front-end ao modelo de dados definido para o backend (equipamento, aluno, técnico, empréstimo).
+
+seguindo esse modelo de dados
+
+ajuste meu front end para o que for necessario e o que este nesse documento
+Modelo de dados em doc pdf
+
+**Backend — CursorIDE, com prompt redigido com apoio do Claude Code.**
+
+# Prompt — Backend do Sistema de Empréstimo de Equipamentos (Python + FastAPI + Neon)
+
+Crie o backend de um sistema de controle de empréstimo de equipamentos de
+laboratório, usando **Python + FastAPI**, com banco de dados **PostgreSQL
+hospedado no Neon**.
+
+## Stack obrigatória
+- Python 3.11+
+- FastAPI
+- SQLAlchemy 2.x (ORM)
+- Alembic (migrações do banco)
+- psycopg2-binary (driver Postgres)
+- python-dotenv (variáveis de ambiente)
+- Pydantic v2 (schemas de entrada/saída)
+- Uvicorn (servidor)
+
+## Conexão com o banco (Neon)
+- A string de conexão deve vir de variável de ambiente `DATABASE_URL`, lida de
+  um arquivo `.env` (não commitado — adicionar ao `.gitignore`).
+- Formato da connection string do Neon:
+  `postgresql://usuario:senha@ep-xxxx.neon.tech/nomedobanco?sslmode=require`
+- Neon exige SSL — garantir que `sslmode=require` esteja sempre presente na
+  conexão.
+- Usar `create_engine` do SQLAlchemy com pool configurado para conexões
+  serverless (Neon pode encerrar conexões ociosas) — usar `pool_pre_ping=True`
+  para evitar erros de conexão "stale".
+- Criar um arquivo `.env.example` com a variável `DATABASE_URL` vazia, para
+  documentar o que precisa ser configurado.
+
+## Modelagem de dados (já definida — implementar exatamente assim)
+
+**aluno**
+- id (PK)
+- nome (string, obrigatório)
+- matricula (string, único, obrigatório)
+- email (string, opcional)
+- telefone (string, opcional)
+- ativo (boolean, default true)
+- criado_em (timestamp, default now)
+
+**tecnico**
+- id (PK)
+- nome (string, obrigatório)
+- login (string, único, obrigatório)
+- ativo (boolean, default true)
+
+**equipamento**
+- id (PK)
+- nome (string, obrigatório)
+- patrimonio (string, único, obrigatório)
+- categoria (string, opcional)
+- status (string, default "disponivel") — valores possíveis: `disponivel`,
+  `emprestado`, `manutencao`, `baixado`
+- observacao (texto, opcional)
+- criado_em (timestamp, default now)
+
+**emprestimo**
+- id (PK)
+- aluno_id (FK -> aluno)
+- equipamento_id (FK -> equipamento)
+- tecnico_id (FK -> tecnico) — quem liberou a retirada
+- tecnico_devolucao_id (FK -> tecnico, opcional) — quem recebeu a devolução
+- data_emprestimo (timestamp, default now)
+- data_prevista_devolucao (date, obrigatório)
+- data_devolucao (timestamp, opcional — NULL significa que ainda está
+  emprestado)
+- observacao (texto, opcional)
+
+Usar Alembic para gerar e versionar as migrações a partir desses modelos —
+não usar `Base.metadata.create_all` em produção.
+
+## Regras de negócio (validar na camada de serviço, antes de tocar o banco)
+
+1. **Aluno com pendência não pode retirar outro equipamento.** Pendência =
+   aluno tem qualquer empréstimo com `data_devolucao IS NULL` e
+   `data_prevista_devolucao` no passado. Retornar erro 403 com mensagem clara.
+2. **Equipamento só pode ser emprestado se `status = 'disponivel'`.** Ao
+   registrar o empréstimo, mudar o status para `emprestado`. Se já estiver
+   emprestado/manutenção/baixado, retornar erro 409.
+3. **Ao devolver**, preencher `data_devolucao`, `tecnico_devolucao_id`, e
+   voltar o status do equipamento para `disponivel`.
+4. Um equipamento nunca pode ter dois empréstimos em aberto ao mesmo tempo —
+   reforçar isso tanto na validação da aplicação quanto com um índice único
+   parcial no banco (`CREATE UNIQUE INDEX ... WHERE data_devolucao IS NULL`),
+   incluído na migração do Alembic.
+
+## Endpoints esperados
+
+```
+POST   /alunos                       -> cadastrar aluno
+GET    /alunos                       -> listar alunos
+POST   /tecnicos                     -> cadastrar técnico
+GET    /tecnicos                     -> listar técnicos
+POST   /equipamentos                 -> cadastrar equipamento
+GET    /equipamentos                 -> listar equipamentos
+POST   /emprestimos                  -> registrar retirada (aplica as regras de negócio)
+POST   /emprestimos/{id}/devolver    -> registrar devolução
+GET    /emprestimos/ativos           -> listar empréstimos em aberto (com nome do aluno/equipamento e flag "atrasado")
+GET    /relatorios/atrasos           -> listar empréstimos vencidos, ordenados por dias de atraso (decrescente)
+```
+
+## Estrutura de projeto esperada
+
+```
+backend/
+  app/
+    main.py            # instancia o FastAPI, inclui os routers
+    database.py         # engine, sessionmaker, get_db()
+    models.py           # modelos SQLAlchemy
+    schemas.py           # schemas Pydantic
+    crud.py               # regras de negócio e acesso ao banco
+    routers/
+      alunos.py
+      tecnicos.py
+      equipamentos.py
+      emprestimos.py
+      relatorios.py
+  alembic/
+    versions/
+  alembic.ini
+  requirements.txt
+  .env.example
+  README.md
+```
+
+## Requisitos adicionais
+- Habilitar CORS liberado (`allow_origins=["*"]`) para desenvolvimento local
+  com um frontend separado.
+- Tratar erros de negócio com `HTTPException` e mensagens em português,
+  claras o suficiente para aparecer direto na tela do técnico.
+- Incluir no `README.md` o passo a passo para: criar o banco no Neon, copiar
+  a connection string, configurar o `.env`, rodar as migrações do Alembic
+  (`alembic upgrade head`) e subir o servidor (`uvicorn app.main:app --reload`).
+- Não é necessário autenticação/login nesta etapa.
+Conecte com o meu front end 
+
+ O prompt já trazia a stack (FastAPI + SQLAlchemy + Alembic + Neon), a modelagem de dados completa, as quatro regras de negócio, os endpoints esperados e a estrutura de pastas, além de pedir explicitamente a conexão com o front-end já existente.
+
+**O que foi verificado manualmente:** ___ (preencher — por exemplo: execução dos três critérios de aceite do §3 contra o sistema final; leitura linha a linha das regras de negócio em `crud.py` comparando com o que foi pedido no prompt; teste do índice único parcial simulando duas retiradas do mesmo equipamento; confirmação de que as telas do front-end batem com os campos definidos no backend).
