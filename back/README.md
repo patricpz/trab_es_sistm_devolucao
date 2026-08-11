@@ -1,69 +1,72 @@
 # Backend — Sistema de Empréstimo de Equipamentos
 
-API REST em **Python + FastAPI** com banco **PostgreSQL** hospedado no [Neon](https://neon.tech), para controle de empréstimo de equipamentos de laboratório.
+API REST em **Python + FastAPI** com banco **PostgreSQL** no [Neon](https://neon.tech), para controle de empréstimo de equipamentos de laboratório.
 
-## Pré-requisitos
+## Decisões de arquitetura
 
-- Python 3.11 ou superior
-- Conta no [Neon](https://console.neon.tech) (plano gratuito disponível)
+### Stack
 
-## 1. Criar o banco no Neon
+- Python 3.11+
+- FastAPI
+- SQLAlchemy 2.x (ORM)
+- Alembic (migrações)
+- psycopg2-binary (driver Postgres)
+- python-dotenv (variáveis de ambiente)
+- Pydantic v2 (schemas de entrada/saída)
+- Uvicorn (servidor)
 
-1. Acesse [console.neon.tech](https://console.neon.tech) e faça login.
-2. Clique em **New Project** e escolha um nome (ex.: `emprestimo-lab`).
-3. Após a criação, vá em **Connection Details** e copie a **connection string** no formato:
-
-   ```
-   postgresql://usuario:senha@ep-xxxx.neon.tech/nomedobanco?sslmode=require
-   ```
-
-   O Neon exige SSL — a string já deve incluir `sslmode=require`.
-
-## 2. Configurar o ambiente local
-
-```bash
-cd back
-
-# Criar e ativar ambiente virtual (Windows)
-python -m venv venv
-venv\Scripts\activate
-
-# Instalar dependências
-pip install -r requirements.txt
-
-# Copiar variáveis de ambiente
-copy .env.example .env
-```
-
-Edite o arquivo `.env` e cole sua connection string do Neon:
+### Estrutura em camadas
 
 ```
-DATABASE_URL=postgresql://usuario:senha@ep-xxxx.neon.tech/nomedobanco?sslmode=require
+back/
+  app/
+    main.py            # instancia o FastAPI, inclui os routers
+    database.py        # engine, sessionmaker, get_db()
+    models.py          # modelos SQLAlchemy
+    schemas.py         # schemas Pydantic
+    crud.py            # regras de negócio e acesso ao banco
+    routers/
+      alunos.py
+      tecnicos.py
+      equipamentos.py
+      emprestimos.py
+      relatorios.py
+  alembic/
+    versions/
+  alembic.ini
+  requirements.txt
+  .env.example
+  README.md
 ```
 
-> **Importante:** o arquivo `.env` não é commitado (está no `.gitignore`). Nunca compartilhe credenciais.
+- **Routers** — rotas HTTP e validação de entrada/saída via Pydantic.
+- **`crud.py`** — regras de negócio validadas **antes** de tocar o banco.
+- **`models.py`** — mapeamento das tabelas no SQLAlchemy.
+- **`database.py`** — conexão com o Neon e injeção de sessão (`get_db()`).
 
-## 3. Rodar as migrações do Alembic
+### Banco de dados (Neon)
 
-Com o `.env` configurado, aplique as migrações para criar as tabelas no banco:
+- Connection string via variável `DATABASE_URL` no `.env` (não commitado; ver `.gitignore`).
+- Formato: `postgresql://usuario:senha@ep-xxxx.neon.tech/nomedobanco?sslmode=require`
+- SSL obrigatório — `sslmode=require` garantido em `database.py`.
+- `pool_pre_ping=True` no `create_engine` (conexões serverless do Neon).
+- Migrações versionadas com **Alembic** — não usar `Base.metadata.create_all` em produção.
+- Índice único parcial na migração: impede dois empréstimos abertos para o mesmo equipamento (`WHERE data_devolucao IS NULL`).
 
-```bash
-alembic upgrade head
-```
+### Modelagem
 
-Isso cria as tabelas `aluno`, `tecnico`, `equipamento` e `emprestimo`, incluindo o índice único parcial que impede dois empréstimos abertos para o mesmo equipamento.
+Tabelas: `aluno`, `tecnico`, `equipamento`, `emprestimo` — conforme especificação do projeto (campos, FKs e defaults definidos nos modelos e na migração `001_initial.py`).
 
-## 4. Subir o servidor
+### Regras de negócio (`crud.py`)
 
-```bash
-uvicorn app.main:app --reload
-```
+1. Aluno com pendência não retira outro equipamento → HTTP **403** (pendência = empréstimo aberto com `data_prevista_devolucao` no passado).
+2. Equipamento só empresta se `status = disponivel` → HTTP **409**; ao emprestar, status vira `emprestado`.
+3. Devolução preenche `data_devolucao`, `tecnico_devolucao_id` e volta status para `disponivel`.
+4. Um equipamento não pode ter dois empréstimos abertos — validação na aplicação + índice único parcial no banco.
 
-A API ficará disponível em [http://127.0.0.1:8000](http://127.0.0.1:8000).
+Erros de negócio via `HTTPException`, mensagens em português.
 
-Documentação interativa (Swagger): [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-
-## Endpoints
+### API
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
@@ -75,41 +78,49 @@ Documentação interativa (Swagger): [http://127.0.0.1:8000/docs](http://127.0.0
 | `GET` | `/equipamentos` | Listar equipamentos |
 | `POST` | `/emprestimos` | Registrar retirada |
 | `POST` | `/emprestimos/{id}/devolver` | Registrar devolução |
-| `GET` | `/emprestimos/ativos` | Listar empréstimos em aberto |
-| `GET` | `/relatorios/atrasos` | Listar empréstimos vencidos |
+| `GET` | `/emprestimos/ativos` | Empréstimos em aberto (com flag `atrasado`) |
+| `GET` | `/relatorios/atrasos` | Empréstimos vencidos, ordenados por dias de atraso ↓ |
 
-## Regras de negócio
+### Outras decisões
 
-- Aluno com empréstimo em atraso **não pode** retirar outro equipamento (HTTP 403).
-- Equipamento só pode ser emprestado se `status = disponivel` (HTTP 409 caso contrário).
-- Ao devolver, o status do equipamento volta para `disponivel`.
-- Um equipamento não pode ter dois empréstimos abertos simultaneamente (validação na aplicação + índice único parcial no banco).
+- **CORS** liberado (`allow_origins=["*"]`) para desenvolvimento local com frontend separado.
+- **Autenticação** não implementada nesta etapa.
 
-## Estrutura do projeto
+---
 
-```
-back/
-  app/
-    main.py              # FastAPI app e CORS
-    database.py          # Engine, sessão e get_db()
-    models.py            # Modelos SQLAlchemy
-    schemas.py           # Schemas Pydantic v2
-    crud.py              # Regras de negócio e acesso ao banco
-    routers/
-      alunos.py
-      tecnicos.py
-      equipamentos.py
-      emprestimos.py
-      relatorios.py
-  alembic/
-    versions/
-      001_initial.py
-  alembic.ini
-  requirements.txt
-  .env.example
-  README.md
+## Como rodar
+
+### 1. Criar o banco no Neon
+
+1. Acesse [console.neon.tech](https://console.neon.tech) e crie um projeto.
+2. Em **Connection Details**, copie a connection string:
+
+   ```
+   postgresql://usuario:senha@ep-xxxx.neon.tech/nomedobanco?sslmode=require
+   ```
+
+### 2. Configurar o `.env`
+
+```bash
+cd back
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.example .env
 ```
 
-## CORS
+Edite `.env` e cole a `DATABASE_URL` copiada do Neon.
 
-CORS está liberado (`allow_origins=["*"]`) para desenvolvimento local com frontend separado.
+### 3. Rodar as migrações do Alembic
+
+```bash
+alembic upgrade head
+```
+
+### 4. Subir o servidor
+
+```bash
+uvicorn app.main:app --reload
+```
+
+API em [http://127.0.0.1:8000](http://127.0.0.1:8000) · Docs em [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
