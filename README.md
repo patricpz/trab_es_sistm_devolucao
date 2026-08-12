@@ -108,7 +108,7 @@ Modelo de dados em doc pdf
 
 **Backend — CursorIDE, com prompt redigido com apoio do Claude Code.**
 
-# Prompt — Backend do Sistema de Empréstimo de Equipamentos (Python + FastAPI + Neon)
+# Backend do Sistema de Empréstimo de Equipamentos (Python + FastAPI + Neon)
 
 Crie o backend de um sistema de controle de empréstimo de equipamentos de
 laboratório, usando **Python + FastAPI**, com banco de dados **PostgreSQL
